@@ -109,7 +109,11 @@ def info(text, colour, heading):
 
 def component(label, default, colour, description, method, use):
     a,b=st.sidebar.columns([.83,.17])
-    enabled=a.checkbox(label,value=default)
+    enabled=a.checkbox(
+        label,
+        value=default,
+        help=f"{description} {method} Select this component when: {use}",
+    )
     with b.popover("ℹ", use_container_width=True):
         info(description,colour,"What it represents")
         info(method,colour,"What it uses")
@@ -119,99 +123,254 @@ def component(label, default, colour, description, method, use):
 st.sidebar.title("US²DF Inputs")
 st.sidebar.caption("Select the requirements that apply, then enter the assumptions for your study.")
 st.sidebar.subheader("1. Components")
-use_precision=component("Precision",True,"prec",
+use_precision=component(
+    "Precision",True,"prec",
     "Minimum sample size needed to estimate a mean or proportion within a chosen accuracy target.",
     "Finite-population precision calculation or a justified estimand-specific requirement.",
-    "Descriptive estimation or a stated precision objective.")
-use_power=component("Power",True,"pow",
+    "Descriptive estimation or a stated precision objective.",
+)
+use_power=component(
+    "Power",True,"pow",
     "Minimum sample size needed to detect a specified effect with the selected statistical test.",
     "Test-specific analytical calculations. Rounded reference values are available only for balanced two-group mean comparisons.",
-    "Hypothesis tests, comparisons and other inferential objectives.")
-use_model=component("Model",False,"mod",
+    "Hypothesis tests, comparisons and other inferential objectives.",
+)
+use_model=component(
+    "Model",False,"mod",
     "Minimum sample size needed to support the planned model and its parameters.",
     "Regression and logistic screening rules, a simplified CFA screen, or an externally justified requirement.",
-    "Regression, logistic regression, CFA/SEM or another model-dependent analysis.")
+    "Regression, logistic regression, CFA/SEM or another model-dependent analysis.",
+)
 if not (use_precision or use_power or use_model):
     st.sidebar.warning("Select at least one component to calculate a recommendation.")
 
 st.sidebar.subheader("2. Population and estimand")
-N=int(st.sidebar.number_input("Population size (N)",min_value=1,value=50000,step=100))
-outcome=st.sidebar.selectbox("Measurement scale",["Categorical (proportions)","Continuous (means, scales)"])
-confidence=st.sidebar.selectbox("Confidence level",["95%","99%"])
+N=int(st.sidebar.number_input(
+    "Population size (N)",
+    min_value=1,value=50000,step=100,
+    help="Total number of eligible units in the population from which the sample may be drawn. It is used in the finite-population precision calculation and to assess whether the final recruitment target exceeds the available population.",
+))
+outcome=st.sidebar.selectbox(
+    "Measurement scale",
+    ["Categorical (proportions)","Continuous (means, scales)"],
+    help="Choose the form of the main outcome used for precision planning. Categorical outcomes are represented by proportions; continuous outcomes are represented by means or scale scores. This selection determines the default precision parameter ρ and accuracy setting.",
+)
+confidence=st.sidebar.selectbox(
+    "Confidence level",
+    ["95%","99%"],
+    help="Confidence level used for the precision calculation. A higher confidence level requires a larger sample because the interval must provide greater coverage.",
+)
 conf=.95 if confidence=="95%" else .99
 rho=2 if outcome.startswith("Categorical") else 4
 
 st.sidebar.subheader("3. Precision")
-precision_mode=st.sidebar.selectbox("Precision basis",["Adam finite-population formula","Externally justified requirement"],disabled=not use_precision)
+precision_mode=st.sidebar.selectbox(
+    "Precision basis",
+    ["Adam finite-population formula","Externally justified requirement"],
+    disabled=not use_precision,
+    help="Choose how the precision requirement is obtained. Use the built-in finite-population formula for the manuscript's precision convention, or enter an externally justified requirement when another estimand-specific method is more appropriate.",
+)
 e=.05 if rho==2 else .03
 if use_precision and precision_mode.startswith("Adam"):
-    e=float(st.sidebar.number_input("Accuracy target (e)",min_value=.001,max_value=.20,value=e,step=.001,format="%.3f",key="e_cat" if rho==2 else "e_cont"))
+    e=float(st.sidebar.number_input(
+        "Accuracy target (e)",
+        min_value=.001,max_value=.20,value=e,step=.001,format="%.3f",
+        key="e_cat" if rho==2 else "e_cont",
+        help="Accuracy parameter used in the finite-population precision formula. Smaller values impose a stricter accuracy requirement and therefore increase the sample size. Interpret e according to the scale convention used by the formula rather than as a universal margin of error.",
+    ))
     st.sidebar.caption("The continuous default is an accuracy convention, not a direct half-width of 0.03 standard deviations.")
 elif use_precision:
-    precision_manual=float(st.sidebar.number_input("Required completed observations",min_value=1.0,value=385.0,step=1.0))
-    precision_source=st.sidebar.text_input("Basis or source for this requirement")
+    precision_manual=float(st.sidebar.number_input(
+        "Required completed observations",
+        min_value=1.0,value=385.0,step=1.0,
+        help="Enter a precision-based minimum sample size obtained from another defensible formula, simulation, software package or study-specific calculation. The value will be rounded upward to a whole observation.",
+    ))
+    precision_source=st.sidebar.text_input(
+        "Basis or source for this requirement",
+        help="Briefly state the formula, software, publication, simulation or study-specific rationale supporting the externally justified precision requirement. This description is retained in the calculation breakdown.",
+    )
 
 st.sidebar.subheader("4. Power")
-design=st.sidebar.selectbox("Statistical design",["Two independent means","One-sample mean","Two independent proportions","One proportion","One-way ANOVA"],disabled=not use_power)
+design=st.sidebar.selectbox(
+    "Statistical design",
+    ["Two independent means","One-sample mean","Two independent proportions","One proportion","One-way ANOVA"],
+    disabled=not use_power,
+    help="Choose the hypothesis-testing design for the power requirement. The selected design determines the effect-size definition and analytical power formula used by the planner.",
+)
 power_mode="Analytical calculation"
 if use_power and design=="Two independent means":
-    power_mode=st.sidebar.radio("Calculation",["Analytical calculation","Rounded reference values"],horizontal=False)
+    power_mode=st.sidebar.radio(
+        "Calculation",
+        ["Analytical calculation","Rounded reference values"],
+        horizontal=False,
+        help="Analytical calculation uses the selected test, effect size, significance level, power target and allocation. Rounded reference values are available only for the balanced two-group mean design reported in the manuscript.",
+    )
 alpha=.05; target=.8; d=.5; p0=.5; p1=.5; p2=.6; groups=3; f_effect=.25
 if use_power and power_mode=="Rounded reference values":
-    effect=st.sidebar.radio("Reference effect size",list(REFERENCES),index=1)
+    effect=st.sidebar.radio(
+        "Reference effect size",
+        list(REFERENCES),index=1,
+        help="Select the Cohen d reference category for the balanced two-group mean design. Rounded per-group values are Small = 400, Medium = 65 and Large = 30, corresponding to d = 0.20, 0.50 and 0.80 under two-sided α = 0.05 and 80% power.",
+    )
     st.sidebar.caption("Balanced, equal-variance two-group means only. Two-sided α=0.05, power=0.80. The reference counts are rounded upward from exact t-test minima.")
 else:
     if use_power:
-        alpha=float(st.sidebar.number_input("Significance level (α)",min_value=.001,max_value=.20,value=.05,step=.001,format="%.3f"))
-        target=float(st.sidebar.number_input("Target power (1−β)",min_value=.50,max_value=.99,value=.80,step=.01,format="%.2f"))
+        alpha=float(st.sidebar.number_input(
+            "Significance level (α)",
+            min_value=.001,max_value=.20,value=.05,step=.001,format="%.3f",
+            help="Probability of a Type I error under the null hypothesis. The conventional value is 0.05. A smaller α imposes a stricter evidential threshold and generally increases the required sample size.",
+        ))
+        target=float(st.sidebar.number_input(
+            "Target power (1−β)",
+            min_value=.50,max_value=.99,value=.80,step=.01,format="%.2f",
+            help="Desired probability of detecting the specified effect when it truly exists. A common planning target is 0.80. Higher target power requires a larger sample size.",
+        ))
         if design in ["Two independent means","One-sample mean"]:
-            d=float(st.sidebar.number_input("Cohen d",min_value=-2.0,max_value=2.0,value=.5,step=.05,format="%.2f"))
+            d=float(st.sidebar.number_input(
+                "Cohen d",
+                min_value=-2.0,max_value=2.0,value=.5,step=.05,format="%.2f",
+                help="Standardised mean difference to be detected. It expresses the expected mean difference in standard-deviation units. The nonzero effect is combined with α and target power to calculate the required sample size.",
+            ))
         elif design=="Two independent proportions":
-            p1=float(st.sidebar.number_input("Group 1 proportion (p1)",min_value=.001,max_value=.999,value=.50,step=.01,format="%.3f"))
-            complementary=st.sidebar.checkbox("Set p2 = 1 − p1",value=False)
+            p1=float(st.sidebar.number_input(
+                "Group 1 proportion (p1)",
+                min_value=.001,max_value=.999,value=.50,step=.01,format="%.3f",
+                help="Expected outcome proportion in the first independent group. Together with p2, this defines the difference the study is powered to detect.",
+            ))
+            complementary=st.sidebar.checkbox(
+                "Set p2 = 1 − p1",value=False,
+                help="Automatically set the second independent-group proportion to 1 − p1. Use this only when there is a substantive reason to expect complementary probabilities across the two independent groups; do not use it merely for convenience.",
+            )
             if complementary:
                 p2=1-p1
                 st.sidebar.caption(f"Group 2 proportion: {p2:.3f}. Use this only when the two independent groups are expected to have complementary probabilities.")
             else:
-                p2=float(st.sidebar.number_input("Group 2 proportion (p2)",min_value=.001,max_value=.999,value=.60,step=.01,format="%.3f"))
+                p2=float(st.sidebar.number_input(
+                    "Group 2 proportion (p2)",
+                    min_value=.001,max_value=.999,value=.60,step=.01,format="%.3f",
+                    help="Expected outcome proportion in the second independent group. The absolute difference between p1 and p2 is the effect to be detected. Equal values imply a zero difference and cannot define a finite sample size for detecting a nonzero effect.",
+                ))
         elif design=="One proportion":
-            p0=float(st.sidebar.number_input("Null proportion (p0)",min_value=.001,max_value=.999,value=.50,step=.01,format="%.3f"))
-            p1=float(st.sidebar.number_input("Alternative proportion (p1)",min_value=.001,max_value=.999,value=.60,step=.01,format="%.3f"))
+            p0=float(st.sidebar.number_input(
+                "Null proportion (p0)",
+                min_value=.001,max_value=.999,value=.50,step=.01,format="%.3f",
+                help="Proportion specified under the null hypothesis for a one-proportion test. The alternative proportion must differ from this value to define a detectable effect.",
+            ))
+            p1=float(st.sidebar.number_input(
+                "Alternative proportion (p1)",
+                min_value=.001,max_value=.999,value=.60,step=.01,format="%.3f",
+                help="Expected true proportion under the alternative hypothesis. The difference between this value and p0 determines the effect to be detected.",
+            ))
         else:
-            groups=int(st.sidebar.number_input("Number of groups",min_value=3,max_value=100,value=3,step=1))
-            f_effect=float(st.sidebar.number_input("Cohen f",min_value=.001,max_value=2.0,value=.25,step=.01,format="%.3f"))
+            groups=int(st.sidebar.number_input(
+                "Number of groups",
+                min_value=3,max_value=100,value=3,step=1,
+                help="Number of independent groups in the balanced one-way ANOVA. The analytical calculation assumes equal group sizes.",
+            ))
+            f_effect=float(st.sidebar.number_input(
+                "Cohen f",
+                min_value=.001,max_value=2.0,value=.25,step=.01,format="%.3f",
+                help="Standardised effect size for one-way ANOVA. Cohen f summarises the dispersion of group means relative to within-group variability. Larger values represent stronger group differences.",
+            ))
 
 st.sidebar.subheader("5. Model")
 model="None"
 if use_model:
-    model=st.sidebar.selectbox("Model type",["Multiple regression","Logistic regression","SEM / CFA","Externally justified requirement"])
+    model=st.sidebar.selectbox(
+        "Model type",
+        ["Multiple regression","Logistic regression","SEM / CFA","Externally justified requirement"],
+        help="Choose the analytical model whose sample-size requirement should be checked. Built-in regression, logistic and CFA/SEM options are planning screens; use an externally justified requirement when a formal model-specific calculation is available.",
+    )
     if model in ["Multiple regression","Logistic regression"]:
-        k=int(st.sidebar.number_input("Candidate predictor parameters (k)",min_value=1,value=10,step=1))
+        k=int(st.sidebar.number_input(
+            "Candidate predictor parameters (k)",
+            min_value=1,value=10,step=1,
+            help="Number of predictor parameters planned for the model. Count parameters to be estimated rather than only conceptual variables when dummy variables, interactions or nonlinear terms create additional coefficients.",
+        ))
     if model=="Multiple regression":
-        overall=st.sidebar.checkbox("Overall-model inference",value=True)
-        individual=st.sidebar.checkbox("Individual-predictor inference",value=True)
+        overall=st.sidebar.checkbox(
+            "Overall-model inference",value=True,
+            help="Select when the analysis will assess the overall multiple-regression model. The Green screening rule for this objective is 50 + 8k.",
+        )
+        individual=st.sidebar.checkbox(
+            "Individual-predictor inference",value=True,
+            help="Select when the analysis will interpret tests of individual regression coefficients. The Green screening rule for this objective is 104 + k. When both objectives apply, the larger screen is used.",
+        )
     elif model=="Logistic regression":
-        rate=float(st.sidebar.number_input("Anticipated event rate",min_value=.001,max_value=.999,value=.20,step=.01,format="%.3f"))
-        epv=int(st.sidebar.number_input("Events per parameter (EPV)",min_value=1,value=10,step=1))
+        rate=float(st.sidebar.number_input(
+            "Anticipated event rate",
+            min_value=.001,max_value=.999,value=.20,step=.01,format="%.3f",
+            help="Expected proportion in the rarer binary outcome category. Sparse outcomes require a larger total sample to obtain the selected number of events per parameter.",
+        ))
+        epv=int(st.sidebar.number_input(
+            "Events per parameter (EPV)",
+            min_value=1,value=10,step=1,
+            help="Planning screen for the number of observations in the rarer outcome category per candidate model parameter. EPV is a heuristic, not a universal guarantee of model performance; use a formal model-development sample-size method when possible.",
+        ))
     elif model=="SEM / CFA":
-        latents=int(st.sidebar.number_input("Latent variables",min_value=1,value=3,step=1))
-        indicators=int(st.sidebar.number_input("Indicators per latent",min_value=2,value=4,step=1))
-        ratio=int(st.sidebar.number_input("Observations per parameter",min_value=1,value=10,step=1))
+        latents=int(st.sidebar.number_input(
+            "Latent variables",
+            min_value=1,value=3,step=1,
+            help="Number of latent constructs in the simplified CFA/SEM screening model. This contributes to the approximate count of free parameters.",
+        ))
+        indicators=int(st.sidebar.number_input(
+            "Indicators per latent",
+            min_value=2,value=4,step=1,
+            help="Number of observed indicators assigned to each latent variable in the simplified screen. The actual parameter count may differ with unequal indicators, cross-loadings, correlated residuals or structural paths.",
+        ))
+        ratio=int(st.sidebar.number_input(
+            "Observations per parameter",
+            min_value=1,value=10,step=1,
+            help="Selected observations-to-free-parameter ratio used only as an illustrative CFA/SEM planning screen. It is not a universal minimum; model-specific SEM power or precision calculations are preferable when available.",
+        ))
     else:
-        model_manual=float(st.sidebar.number_input("Required completed observations",min_value=1.0,value=200.0,step=1.0))
-        model_source=st.sidebar.text_input("Basis or source for this requirement")
+        model_manual=float(st.sidebar.number_input(
+            "Required completed observations",
+            min_value=1.0,value=200.0,step=1.0,
+            help="Enter a model-specific minimum obtained from a formal power, precision, shrinkage, simulation or other defensible calculation. The value will be rounded upward to a whole observation.",
+        ))
+        model_source=st.sidebar.text_input(
+            "Basis or source for this requirement",
+            help="State the method, software, publication, simulation or rationale supporting the externally entered model requirement. This description is retained in the calculation breakdown.",
+        )
 
 st.sidebar.subheader("6. Field adjustments")
-apply_deff=st.sidebar.checkbox("Apply design effect",value=False)
-deff=float(st.sidebar.number_input("DEFF",min_value=1.0,value=1.5,step=.1,disabled=not apply_deff)) if apply_deff else 1.0
-apply_hvif=st.sidebar.checkbox("Apply residual HVIF",value=False)
-hvif=float(st.sidebar.number_input("Residual HVIF",min_value=1.0,value=1.2,step=.1,disabled=not apply_hvif)) if apply_hvif else 1.0
+apply_deff=st.sidebar.checkbox(
+    "Apply design effect",value=False,
+    help="Turn on when the sampling design is expected to inflate estimator variance relative to the reference simple-random-sampling design, for example because of clustering or unequal weighting.",
+)
+deff=float(st.sidebar.number_input(
+    "DEFF",
+    min_value=1.0,value=1.5,step=.1,disabled=not apply_deff,
+    help="Design effect: ratio of estimator variance under the planned sampling design to its variance under the reference design. DEFF = 1 means no inflation. Use a study- or design-justified value where possible.",
+)) if apply_deff else 1.0
+
+apply_hvif=st.sidebar.checkbox(
+    "Apply residual HVIF",value=False,
+    help="Turn on only when there is an additional, separately justified variance-inflation contribution not already contained in DEFF. Do not apply it when it would duplicate variance already represented by the design effect.",
+)
+hvif=float(st.sidebar.number_input(
+    "Residual HVIF",
+    min_value=1.0,value=1.2,step=.1,disabled=not apply_hvif,
+    help="Residual Heterogeneity Variance Inflation Factor. Use a value above 1 only for a distinct variance contribution not already incorporated in DEFF. If no independently justified residual inflation exists, leave this adjustment off.",
+)) if apply_hvif else 1.0
 if apply_hvif:
-    hvif_basis=st.sidebar.text_input("Distinct variance contribution not already in DEFF")
+    hvif_basis=st.sidebar.text_input(
+        "Distinct variance contribution not already in DEFF",
+        help="Describe the specific residual source of variance inflation represented by HVIF and why it is not already included in DEFF. This explanation helps prevent double-counting.",
+    )
 else:
     hvif_basis=""
-apply_nr=st.sidebar.checkbox("Apply nonresponse adjustment",value=False)
-r=float(st.sidebar.number_input("Anticipated nonresponse rate",min_value=0.0,max_value=.90,value=.05,step=.01)) if apply_nr else 0.0
+
+apply_nr=st.sidebar.checkbox(
+    "Apply nonresponse adjustment",value=False,
+    help="Turn on when fewer than 100% of approached eligible units are expected to provide usable responses. The adjustment increases the recruitment target so the planned number of completed observations can still be achieved.",
+)
+r=float(st.sidebar.number_input(
+    "Anticipated nonresponse rate",
+    min_value=0.0,max_value=.90,value=.05,step=.01,
+    help="Expected proportion of approached eligible units that will not provide a usable response. For example, 0.20 means 20% nonresponse. This inflates recruitment but does not correct nonresponse bias.",
+)) if apply_nr else 0.0
 
 errors=[]; requirements={}; notes={}; precision_detail=None; power_detail=None
 try:
@@ -335,14 +494,14 @@ with planner_tab:
         st.info("Adjust the inputs in the left panel. The explanatory tabs remain available while you refine the calculation.")
     else:
         a,b,c=st.columns(3)
-        a.metric("Precision",f"{requirements['Precision']:,}" if "Precision" in requirements else "—")
-        b.metric("Power",f"{requirements['Power']:,}" if "Power" in requirements else "—")
-        c.metric("Model",f"{requirements['Model']:,}" if "Model" in requirements else "—")
+        a.metric("Precision",f"{requirements['Precision']:,}" if "Precision" in requirements else "—",help="Whole-number completed-observation requirement generated by the selected precision method. A dash means the precision component was not selected.")
+        b.metric("Power",f"{requirements['Power']:,}" if "Power" in requirements else "—",help="Whole-number requirement generated by the selected statistical power calculation. For group designs, the displayed value is the total sample across groups.")
+        c.metric("Model",f"{requirements['Model']:,}" if "Model" in requirements else "—",help="Whole-number requirement associated with the selected model screen or externally justified model-specific calculation.")
 
         st.subheader("Recommendation")
         a,b=st.columns(2)
-        a.metric("Base sample size",f"{result['base']:,}")
-        b.metric("Operational recruitment target",f"{result['operational']:,}")
+        a.metric("Base sample size",f"{result['base']:,}",help="Largest of the applicable compatible precision, power and model requirements. This is the minimum completed-observation target before field adjustments.")
+        b.metric("Operational recruitment target",f"{result['operational']:,}",help="Recruitment target after applicable DEFF, residual HVIF and nonresponse adjustments, capped at the finite population when necessary. The uncapped target remains reported separately.")
 
         st.success("Binding requirement: "+", ".join(result["binding"]))
 

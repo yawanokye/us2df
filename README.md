@@ -7,6 +7,8 @@ The application now includes:
 - a professional landing/hero section;
 - feature cards for Precision, Power, and Model/Field planning;
 - five main tabs: Planner, Concepts, How US²DF Works, Interpreting Results, and Methods & Reference;
+- explanatory tooltips on every input control, including population, precision, power, model and field-adjustment settings;
+- explanatory tooltips on the main output indicators so users can interpret the reported values;
 - the full US²DF calculation engine in the Planner tab;
 - whole-number upward rounding for all calculated sample-size requirements;
 - test-specific analytical power calculations and design-specific rounded reference values;
