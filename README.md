@@ -1,11 +1,35 @@
 # US²DF Sample Size Planner
 
-This Streamlit application implements the methods in the accompanying manuscript. It uses the finite-population precision convention, exact noncentral-t calculations for one- and two-sample means, a balanced one-way noncentral-F calculation, and explicitly labelled normal approximations for proportions.
+Professional Streamlit implementation of the **Unified Sample Size Determination Framework (US²DF): Reconciling Precision, Power, Model Complexity and Field Constraints**.
 
-Run locally with `pip install -r requirements.txt` followed by `streamlit run app.py`.
+## Interface
+The application now includes:
+- a professional landing/hero section;
+- feature cards for Precision, Power, and Model/Field planning;
+- five main tabs: Planner, Concepts, How US²DF Works, Interpreting Results, and Methods & Reference;
+- the full US²DF calculation engine in the Planner tab;
+- whole-number upward rounding for all calculated sample-size requirements;
+- test-specific analytical power calculations and design-specific rounded reference values;
+- separate base, uncapped recruitment, and finite-population operational targets;
+- copy-ready Methods text and CSV export.
 
-For an existing Render service, retain its URL and set the build command to `pip install -r requirements.txt` and the start command to `bash start.sh`. The service binds to the supplied PORT. The included render.yaml is an optional blueprint for a new service. No database migration or external credentials are required.
+## Render deployment
+Build command:
 
-The default is an analytical two-group mean calculation. Rounded reference values of 400, 65 and 30 per group are available only for the manuscript's balanced two-group reference design. All required counts use the ceiling, including precision limits, per-group allocations, model screens and recruitment targets. The population cap is reported separately from the uncapped requirement.
+`pip install -r requirements.txt`
 
-Run `python -m unittest discover -s tests -v` for the calculation and interface checks. The application does not claim statistical adequacy outside the assumptions of its selected method.
+Start command:
+
+`bash start.sh`
+
+The application binds to Render's `PORT` through `start.sh`. The included `render.yaml` can also be used as a blueprint.
+
+## Local run
+`pip install -r requirements.txt`
+
+`streamlit run app.py`
+
+## Checks
+`python -m unittest discover -s tests -v`
+
+The package has 19 calculation tests covering precision, exact t-test requirements, proportion calculations, ANOVA, model screens, rounding, max-rule reconciliation, population capping, and application syntax.
