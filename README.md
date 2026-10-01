@@ -9,6 +9,8 @@ The application now includes:
 - five main tabs: Planner, Concepts, How US²DF Works, Interpreting Results, and Methods & Reference;
 - explanatory tooltips on every input control, including population, precision, power, model and field-adjustment settings;
 - explanatory tooltips on the main output indicators so users can interpret the reported values;
+- a dynamic copy-ready Sample Size Justification based on the selected inputs and binding requirement;
+- a worked reporting example showing how US²DF and the underlying component methods should be documented;
 - the full US²DF calculation engine in the Planner tab;
 - whole-number upward rounding for all calculated sample-size requirements;
 - test-specific analytical power calculations and design-specific rounded reference values;

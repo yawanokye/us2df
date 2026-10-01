@@ -546,18 +546,47 @@ with planner_tab:
             "text/csv",
         )
 
-        methods="Sample size was determined using US²DF. "
-        methods+=" ".join(f"The {k.lower()} requirement was {v:,} ({notes[k]})." for k,v in requirements.items())
-        methods+=f" The base requirement was {result['base']:,}, the maximum of the applicable requirements. "
-        methods+=(
-            f"Field planning used DEFF={deff:g}, residual HVIF={hvif:g}, and anticipated "
-            f"nonresponse={r:g}, giving an uncapped recruitment target of {result['uncapped']:,} "
-            f"and an operational target of {result['operational']:,}."
+        component_text = []
+        for k,v in requirements.items():
+            component_text.append(f"the {k.lower()} requirement was n = {v:,} ({notes[k]})")
+        if len(component_text) == 1:
+            components_sentence = component_text[0]
+        elif len(component_text) == 2:
+            components_sentence = " and ".join(component_text)
+        else:
+            components_sentence = ", ".join(component_text[:-1]) + ", and " + component_text[-1]
+
+        binding_text = ", ".join(result["binding"]).lower()
+        justification = (
+            "Sample size was determined using the Unified Sample Size Determination Framework (US²DF), "
+            "which reconciles applicable precision, power and model-based requirements by selecting the "
+            "largest valid lower bound as the base sample size. For the present study, "
+            f"{components_sentence}. Accordingly, the {binding_text} requirement was binding and a base "
+            f"sample size of n = {result['base']:,} was adopted. "
         )
+        if deff != 1 or hvif != 1 or r != 0:
+            justification += (
+                f"Field planning then applied DEFF = {deff:g}, residual HVIF = {hvif:g}, and an anticipated "
+                f"nonresponse rate of {r:.0%}, giving an uncapped recruitment target of n = {result['uncapped']:,} "
+                f"and an operational recruitment target of n = {result['operational']:,}."
+            )
+        else:
+            justification += (
+                f"No field inflation was applied, so the operational recruitment target remained "
+                f"n = {result['operational']:,}."
+            )
         if result["exceeds_population"]:
-            methods+=" The population cap was reported as a feasibility limit and was not interpreted as satisfying an otherwise unattainable statistical target."
-        st.subheader("Copy-ready Methods text")
-        st.code(methods,language="text")
+            justification += (
+                " Because the uncapped target exceeded the available population, the population cap was "
+                "reported as a feasibility limit rather than as evidence that the original statistical target had been attained."
+            )
+
+        st.subheader("Copy-ready Sample Size Justification")
+        st.caption(
+            "Use this as a reporting template. In a manuscript, cite US²DF for the decision framework and "
+            "also cite or describe the statistical method that generated each component requirement."
+        )
+        st.code(justification,language="text")
 
 with concepts_tab:
     st.subheader("Concepts")
@@ -672,12 +701,32 @@ with reference_tab:
         "*Unified Sample Size Determination Framework (US²DF): Reconciling Precision, Power, Model Complexity and Field Constraints.*  \n"
         "Manuscript."
     )
+    st.caption("Replace the manuscript citation with the final publication details after publication.")
 
     st.markdown("#### Application scope")
     st.write(
         "The planner implements the methods described in the accompanying manuscript. Its output is conditional "
-        "on the assumptions entered by the user and should be reported together with the selected design, effect "
-        "definition, model requirements and field adjustments."
+        "on the assumptions entered by the user and can provide a structured basis for justifying the final sample size. "
+        "The justification should be reported together with the selected design, effect definition, underlying component methods, "
+        "model requirements and field adjustments."
+    )
+
+    st.markdown("#### Example of a complete sample-size justification")
+    st.markdown(
+        '<div class="us2df-note">'
+        'Sample size was determined using the Unified Sample Size Determination Framework (US²DF), '
+        'which treats precision, statistical power and model complexity as potentially competing '
+        'lower-bound requirements and selects the largest applicable requirement as the base sample size. '
+        'For the study, the precision requirement was n = 385, the power requirement was n = 260, '
+        'and the model-based requirement was n = 130. Accordingly, the precision requirement was binding '
+        'and a base sample size of n = 385 was adopted. After allowing for 10% anticipated nonresponse, '
+        'the recruitment target was increased to n = 428 participants.'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+    st.caption(
+        "This is an illustration only. Replace the values and assumptions with those generated for the actual study. "
+        "US²DF should be cited for the decision framework, while the underlying precision, power or model method should also be reported."
     )
 
     st.markdown("#### Key implementation principles")
