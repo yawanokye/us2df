@@ -701,7 +701,7 @@ with reference_tab:
         "*Unified Sample Size Determination Framework (US²DF): Reconciling Precision, Power, Model Complexity and Field Constraints.*  \n"
         "Manuscript."
     )
-    st.caption("Replace the manuscript citation with the final publication details after publication.")
+
 
     st.markdown("#### Application scope")
     st.write(
